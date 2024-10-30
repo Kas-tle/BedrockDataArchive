@@ -1,0 +1,39 @@
+{
+    "format_version": 2,
+    "header": {
+        "name": "Bedrock Data Archive",
+        "description": "Sends bedrock data from BDS to the response server",
+        "uuid": "6f042ed4-94ea-4540-a262-7f05df302733",
+        "version": [ 1, 0, 0 ],
+        "min_engine_version": [ 1, 20, 10 ]
+    },
+    "modules": [
+        {
+            "type": "data",
+            "description": "data",
+            "uuid": "761ad7af-4f04-4f1f-a239-b85bd015e6fa",
+            "version": [ 1, 0, 0 ]
+        },
+        {
+            "type": "script",
+            "description": "script",
+            "uuid": "a918f931-732c-4391-b71b-8a004b8922b9",
+            "version": [ 1, 0, 0 ],
+            "entry": "scripts/index.js"
+        }
+    ],
+    "dependencies": [
+        {
+            "module_name": "@minecraft/server",
+            "version": "1.4.0-beta"
+        },
+        {
+            "module_name": "@minecraft/server-admin",
+            "version": "1.0.0-beta"
+        },
+        {
+            "module_name": "@minecraft/server-net",
+            "version": "1.0.0-beta"
+        }
+    ]
+}
