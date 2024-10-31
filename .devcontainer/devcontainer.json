@@ -1,0 +1,9 @@
+{
+  "name": "Typescript",
+  "image": "mcr.microsoft.com/devcontainers/base:debian",
+  "postCreateCommand": {
+    "volta": "curl https://get.volta.sh | bash",
+    "node": "volta install node",
+    "yarn": "volta install yarn"
+  }
+}
