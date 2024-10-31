@@ -4,13 +4,27 @@ import fs from 'fs';
 import DirectoryManager from '../util/directory';
 import { Version } from './bedrock';
 import { MessageType, statusMessage } from '../util/console';
+import { NBT } from '../util/nbt';
 import { BufferReader } from '../util/buffer';
-import { read, type NBTData } from 'nbtify';
 
 interface ItemData {
     name: string;
     id: number;
     isComponentBased: boolean;
+}
+
+interface CreativeContentData {
+    id: number;
+    stackSize: number;
+    auxValue: number;
+    blockHash: number;
+    itemUserData?: {
+        serializationMarker: number;
+        serializationVersion: number;
+        compoundTag: string;
+        canPlaceOnBlocks?: string[];
+        canDestroyBlocks?: string[];
+    }
 }
 
 const optionsModule = require('bedrock-protocol/src/options');
@@ -49,14 +63,14 @@ export async function captureClientData(inp: { version: Version }) {
     client.on('packet', async (packet) => {
         const buffer = packet.fullBuffer as Buffer;
 
-        const packetId = buffer.readUInt8(0);
+        const reader = new BufferReader(buffer);
+        const nbt = await NBT.nbtify();
+        const { packetId } = reader.readPacketHeader();
 
         switch (packetId) {
             case 0x0B:
                 fs.writeFileSync(DirectoryManager.export('start_game.hex'), buffer)
                 statusMessage(MessageType.Info, 'Logged StartGamePacket');
-                
-                const reader = new BufferReader(buffer);
 
                 // If possible, skip to after level name (Bedrock level)
                 const hasBerockLevelString = reader.setPositionAfter(Buffer.from([
@@ -75,7 +89,7 @@ export async function captureClientData(inp: { version: Version }) {
 
                     const blockPropertieslLength = reader.readVarInt(); // Block Properties Length
                     if (blockPropertieslLength > 0) {
-                        const blockPropertyData: NBTData = await read(buffer.subarray(reader.getOffset()), { endian: 'little', strict: false });
+                        const blockPropertyData = await nbt.read(buffer.subarray(reader.getOffset()), { endian: 'little', strict: false });
                         if (blockPropertyData.byteOffset) {
                             reader.shiftOffset(blockPropertyData.byteOffset);
                         } else {
@@ -100,6 +114,29 @@ export async function captureClientData(inp: { version: Version }) {
             case 0x91:
                 fs.writeFileSync(DirectoryManager.export('creative_content.hex'), buffer)
                 statusMessage(MessageType.Info, 'Logged CreativeContentPacket');
+                
+                const writeEntriesSize = reader.readVarInt();
+                for (let i = 0; i < writeEntriesSize; i++) {
+                    const creativeNetId = reader.readVarInt();
+                    const id = reader.readVarInt();
+
+                    if (id === 0) continue; // invalid item
+
+                    const stackSize = reader.readUnsignedShort();
+                    const auxValue = reader.readVarInt();
+                    const blockHash = reader.readVarInt();
+
+                    const creativeContent: CreativeContentData = { id, stackSize, auxValue, blockHash };
+
+                    const userDataBuffer = reader.readByteArray();
+                    if (userDataBuffer.length > 0) {
+                        const userReader = new BufferReader(userDataBuffer);
+                        
+                        const serializationMarker = userReader.readShort();
+                        const serializationVersion = userReader.readByte();
+                    }
+                }
+                
                 break;
             case 0x7A:
                 fs.writeFileSync(DirectoryManager.export('biome_list.hex'), buffer)

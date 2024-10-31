@@ -2,7 +2,6 @@ import { setupBedrockServer } from './src/archiver/bedrock';
 import { deployAddon, disableAddon } from './src/archiver/addon';
 import { recieveData } from './src/archiver/data';
 import { processData } from './src/archiver/process';
-import { analyze } from './src/archiver/analyze';
 import { captureClientData } from './src/archiver/client';
 import { MessageType, statusMessage } from './src/util/console';
 

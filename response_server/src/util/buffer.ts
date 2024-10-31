@@ -1,8 +1,9 @@
-import nbt from 'prismarine-nbt'
+import { NBT } from './nbt';
 
 export class BufferReader {
     private buffer: Buffer;
     private offset: number;
+    private static nbt = NBT.nbtify();
 
     constructor(buffer: Buffer) {
         this.buffer = buffer;
@@ -317,10 +318,20 @@ export class BufferReader {
         return uuid;
     }
 
-    readNbt() {
-        const initialOffset = this.offset;
+    readPacketHeader(): { packetId: number; senderId: number; recipientId: number } {
+        const header = this.readVarInt();
+        const packetId = header & 0x3FF;
+        const senderId = (header >> 10) & 0x3;
+        const recipientId = (header >> 12) & 0x3;
 
-        const type = this.readByte();
+        return { packetId, senderId, recipientId };
+    }
+
+    async readNbt(inp: { } = {}) {
+        const initialOffset = this.offset;
+        const nbt = await BufferReader.nbt;
+
+        await nbt.read(this.buffer.subarray(this.offset), { strict: false });
     }
 
     setPositionAfter(sequence: Buffer): boolean {
