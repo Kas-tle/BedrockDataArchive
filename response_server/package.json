@@ -24,6 +24,7 @@
         "chalk": "^4.1.2",
         "compare-versions": "^6.1.1",
         "isomorphic-git": "^1.27.1",
+        "nbtify": "^2.2.0",
         "prismarine-nbt": "^2.5.0",
         "user-agents": "^1.1.332"
     }

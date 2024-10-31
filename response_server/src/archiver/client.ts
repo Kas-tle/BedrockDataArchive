@@ -3,9 +3,15 @@ import { cleanServer, runServer } from './data';
 import fs from 'fs';
 import DirectoryManager from '../util/directory';
 import { Version } from './bedrock';
-import { console } from 'inspector';
 import { MessageType, statusMessage } from '../util/console';
 import { BufferReader } from '../util/buffer';
+import { read, type NBTData } from 'nbtify';
+
+interface ItemData {
+    name: string;
+    id: number;
+    isComponentBased: boolean;
+}
 
 const optionsModule = require('bedrock-protocol/src/options');
 optionsModule.validateOptions = function (options: { version: string | number; protocolVersion: number; useNativeRaknet: boolean; raknetBackend: string; }) {
@@ -40,7 +46,7 @@ export async function captureClientData(inp: { version: Version }) {
     } as any);
 
 
-    client.on('packet', (packet) => {
+    client.on('packet', async (packet) => {
         const buffer = packet.fullBuffer as Buffer;
 
         const packetId = buffer.readUInt8(0);
@@ -53,21 +59,41 @@ export async function captureClientData(inp: { version: Version }) {
                 const reader = new BufferReader(buffer);
 
                 // If possible, skip to after level name (Bedrock level)
-                if (reader.setPositionAfter(Buffer.from([
+                const hasBerockLevelString = reader.setPositionAfter(Buffer.from([
                     0x0D, 0x42, 0x65, 0x64, 0x72, 0x6F, 0x63, 0x6B, 0x20, 0x6C, 0x65, 0x76, 0x65, 0x6C, 
                     0x0D, 0x42, 0x65, 0x64, 0x72, 0x6F, 0x63, 0x6B, 0x20, 0x6C, 0x65, 0x76, 0x65, 0x6C, 
-                ]))) {
-                    console.log(reader.readUUID()); // Template Content Identity
-                    console.log(reader.readBoolean()); // Is Trial?
-                    console.log(reader.readVarInt()); // SyncedPlayerMovementSettings Authority Mode
-                    console.log(reader.readVarInt()); // SyncedPlayerMovementSettings Rewind History Size
-                    console.log(reader.readBoolean()); // SyncedPlayerMovementSettings Server Authoritative Block Breaking
-                    console.log(reader.readUnsignedLong()) // Current Level Time
-                    console.log(reader.readSignedVarInt()); // Enchantment Seed
+                ]));
+
+                if (hasBerockLevelString) {
+                    reader.readString(); // Template Content Identity
+                    reader.readBoolean(); // Is Trial?
+                    reader.readVarInt(); // SyncedPlayerMovementSettings Authority Mode
+                    reader.readVarInt(); // SyncedPlayerMovementSettings Rewind History Size
+                    reader.readBoolean(); // SyncedPlayerMovementSettings Server Authoritative Block Breaking
+                    reader.readUnsignedLong(); // Current Level Time
+                    reader.readSignedVarInt(); // Enchantment Seed
+
                     const blockPropertieslLength = reader.readVarInt(); // Block Properties Length
                     if (blockPropertieslLength > 0) {
-                        
+                        const blockPropertyData: NBTData = await read(buffer.subarray(reader.getOffset()), { endian: 'little', strict: false });
+                        if (blockPropertyData.byteOffset) {
+                            reader.shiftOffset(blockPropertyData.byteOffset);
+                        } else {
+                            throw new Error('Error reading block properties');
+                        }
                     }
+
+                    const itemsListLength = reader.readVarInt(); // Items List Length
+                    const items: ItemData[] = [];
+                    for (let i = 0; i < itemsListLength; i++) {
+                        const name = reader.readString();
+                        const id = reader.readShort();
+                        const isComponentBased = reader.readBoolean();
+
+                        items.push({ name, id, isComponentBased });
+                    }
+
+                    fs.writeFileSync(DirectoryManager.export('items.json'), JSON.stringify(items, null, 4));
                 }
 
                 break;

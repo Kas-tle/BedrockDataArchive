@@ -27,9 +27,9 @@ export class BufferReader {
         this.offset += value;
     }
 
-    readVarInt(): number {
+    readVarInt(inp: { bigEndian?: boolean } = {}): number {
+        let bytes: number[] = [];
         let numRead = 0;
-        let result = 0;
         let byte: number;
 
         do {
@@ -38,7 +38,7 @@ export class BufferReader {
             }
 
             byte = this.buffer[this.offset++];
-            result |= (byte & 0x7F) << (7 * numRead);
+            bytes.push(byte);
 
             numRead++;
             if (numRead > 5) {
@@ -46,18 +46,31 @@ export class BufferReader {
             }
         } while ((byte & 0x80) !== 0);
 
+        let result = 0;
+        if (inp.bigEndian) {
+            const totalBytes = bytes.length;
+            for (let i = 0; i < bytes.length; i++) {
+                byte = bytes[i];
+                result |= (byte & 0x7F) << (7 * (totalBytes - i - 1));
+            }
+        } else {
+            for (let i = 0; i < bytes.length; i++) {
+                byte = bytes[i];
+                result |= (byte & 0x7F) << (7 * i);
+            }
+        }
         return result;
     }
 
-    readSignedVarInt(): number {
-        const raw = this.readVarInt();
+    readSignedVarInt(inp: { bigEndian?: boolean } = {}): number {
+        const raw = this.readVarInt(inp);
         const temp = (raw >>> 1) ^ -(raw & 1);
         return temp;
     }
 
-    readVarLong(): bigint {
+    readVarLong(inp: { bigEndian?: boolean } = {}): bigint {
+        let bytes: number[] = [];
         let numRead = 0;
-        let result = BigInt(0);
         let byte: number;
         const initialOffset = this.offset;
 
@@ -68,7 +81,7 @@ export class BufferReader {
             }
 
             byte = this.buffer[this.offset++];
-            result |= BigInt(byte & 0x7F) << BigInt(7 * numRead);
+            bytes.push(byte);
 
             numRead++;
             if (numRead > 10) {
@@ -77,17 +90,31 @@ export class BufferReader {
             }
         } while ((byte & 0x80) !== 0);
 
+        let result = BigInt(0);
+        if (inp.bigEndian) {
+            const totalBytes = bytes.length;
+            for (let i = 0; i < bytes.length; i++) {
+                byte = bytes[i];
+                result |= BigInt(byte & 0x7F) << BigInt(7 * (totalBytes - i - 1));
+            }
+        } else {
+            for (let i = 0; i < bytes.length; i++) {
+                byte = bytes[i];
+                result |= BigInt(byte & 0x7F) << BigInt(7 * i);
+            }
+        }
+
         return result;
     }
 
-    readSignedVarLong(): bigint {
-        const raw = this.readVarLong();
+    readSignedVarLong(inp: { bigEndian?: boolean } = {}): bigint {
+        const raw = this.readVarLong(inp);
         const temp = (raw >> BigInt(1)) ^ -(raw & BigInt(1));
         return temp;
     }
 
-    readString(): string {
-        const length = this.readVarInt();
+    readString(inp: { bigEndian?: boolean } = {}): string {
+        const length = this.readVarInt(inp);
 
         if (this.offset + length > this.buffer.length) {
             throw new Error("Buffer overrun while reading string");
@@ -110,7 +137,7 @@ export class BufferReader {
         return this.readByte() !== 0;
     }
 
-    readShort(inp: { bigEndian?: boolean }): number {
+    readShort(inp: { bigEndian?: boolean } = {}): number {
         if (this.offset + 2 > this.buffer.length) {
             throw new Error("Buffer overrun while reading short");
         }
@@ -126,7 +153,7 @@ export class BufferReader {
         return value > 0x7FFF ? value - 0x10000 : value;
     }
 
-    readUnsignedShort(inp: { bigEndian?: boolean }): number {
+    readUnsignedShort(inp: { bigEndian?: boolean } = {}): number {
         if (this.offset + 2 > this.buffer.length) {
             throw new Error("Buffer overrun while reading unsigned short");
         }
@@ -142,7 +169,7 @@ export class BufferReader {
         return value;
     }
 
-    readLong(inp: { bigEndian?: boolean }): bigint {
+    readLong(inp: { bigEndian?: boolean } = {}): bigint {
         if (this.offset + 8 > this.buffer.length) {
             throw new Error("Buffer overrun while reading long");
         }
@@ -233,8 +260,8 @@ export class BufferReader {
         return { x, y, z };
     }
 
-    readByteArray(): Buffer {
-        const length = this.readVarInt();
+    readByteArray(inp: { bigEndian?: boolean } = {}): Buffer {
+        const length = this.readVarInt(inp);
 
         if (this.offset + length > this.buffer.length) {
             throw new Error("Buffer overrun while reading byte array");
@@ -245,10 +272,10 @@ export class BufferReader {
         return bytes;
     }
 
-    readBlockCoordinates(): { x: number; y: number; z: number } {
-        const x = this.readSignedVarInt();
-        const y = this.readVarInt();
-        const z = this.readSignedVarInt();
+    readBlockCoordinates(inp: { bigEndian?: boolean } = {}): { x: number; y: number; z: number } {
+        const x = this.readSignedVarInt(inp);
+        const y = this.readVarInt(inp);
+        const z = this.readSignedVarInt(inp);
         return { x, y, z };
     }
 
