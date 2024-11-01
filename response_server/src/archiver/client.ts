@@ -154,13 +154,12 @@ export async function captureClientData(inp: { version: Version }) {
             case 0x7A:
                 fs.writeFileSync(DirectoryManager.export('biome_list.hex'), buffer)
                 statusMessage(MessageType.Info, 'Logged BiomeDefinitionListPacket');
-                // await reader.readNbt();
-                // const biomeNbt = await reader.readNbt();
-                // console.log(biomeNbt);
-                // if (biomeNbt) {
-                //     const result = await nbt.write(biomeNbt);
-                //     await fs.promises.writeFile(DirectoryManager.export('biome_list.nbt'), result);
-                // }
+                const biomeNbt = await reader.readNbt({ endian: 'little-varint' });
+                
+                if (biomeNbt) {
+                    const result = await nbt.write(biomeNbt);
+                    await fs.promises.writeFile(DirectoryManager.export('biome_list.nbt'), result);
+                }
 
                 break;
         }
