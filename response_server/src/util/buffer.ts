@@ -170,13 +170,60 @@ export class BufferReader {
         return value;
     }
 
+    readInt(inp: { bigEndian?: boolean } = {}): number {
+        if (this.offset + 4 > this.buffer.length) {
+            throw new Error("Buffer overrun while reading int");
+        }
+
+        const bytes = this.buffer.subarray(this.offset, this.offset + 4);
+
+        let result = 0;
+        if (inp.bigEndian) {
+            for (let i = 0; i < 4; i++) {
+                result = (result << 8) | bytes[i]
+            }
+        } else {
+            for (let i = 3; i >= 0; i--) {
+                result = (result << 8) | bytes[i]
+            }
+        }
+
+        if (result > 0x7FFFFFFF) {
+            result -= 0x100000000;
+        }
+
+        this.offset += 4;
+        return result;
+    }
+
+    readUnsignedInt(inp: { bigEndian?: boolean } = {}): number {
+        if (this.offset + 4 > this.buffer.length) {
+            throw new Error("Buffer overrun while reading unsigned int");
+        }
+
+        const bytes = this.buffer.subarray(this.offset, this.offset + 4);
+
+        let result = 0;
+        if (inp.bigEndian) {
+            for (let i = 0; i < 4; i++) {
+                result = (result << 8) | bytes[i]
+            }
+        } else {
+            for (let i = 3; i >= 0; i--) {
+                result = (result << 8) | bytes[i]
+            }
+        }
+
+        this.offset += 4;
+        return result;
+    }
+
     readLong(inp: { bigEndian?: boolean } = {}): bigint {
         if (this.offset + 8 > this.buffer.length) {
             throw new Error("Buffer overrun while reading long");
         }
 
         const bytes = this.buffer.subarray(this.offset, this.offset + 8);
-        this.offset += 8;
 
         let result = BigInt(0);
         if (inp.bigEndian) {
@@ -193,6 +240,7 @@ export class BufferReader {
             result -= BigInt("0x10000000000000000");
         }
 
+        this.offset += 8;
         return result;
     }
 
@@ -202,7 +250,6 @@ export class BufferReader {
         }
 
         const bytes = this.buffer.subarray(this.offset, this.offset + 8);
-        this.offset += 8;
 
         let result = BigInt(0);
         if (inp.bigEndian) {
@@ -215,6 +262,7 @@ export class BufferReader {
             }
         }
 
+        this.offset += 8;
         return result;
     }
 
@@ -327,11 +375,35 @@ export class BufferReader {
         return { packetId, senderId, recipientId };
     }
 
-    async readNbt(inp: { } = {}) {
+    async readNbt(inp: Parameters<Awaited<typeof BufferReader.nbt>['read']>[1] = { endian: 'little', strict: false }) {
+        if (this.buffer[this.offset] === 0) {
+            this.offset++;
+            return null;
+        }
+        
         const initialOffset = this.offset;
         const nbt = await BufferReader.nbt;
 
-        await nbt.read(this.buffer.subarray(this.offset), { strict: false });
+        if (inp.strict === undefined) {
+            inp.strict = false;
+        }
+
+        if (inp.endian === undefined) {
+            inp.endian = 'little';
+        }
+
+        try {
+            const value = await nbt.read(this.buffer.subarray(this.offset), inp);
+            if (value.byteOffset) {
+                this.offset += value.byteOffset;
+            }
+
+            return value;
+        } catch (error) {
+            this.offset = initialOffset;
+            console.log(this.buffer.subarray(this.offset))
+            throw new Error(`Error reading NBT: ${error}`, { cause: error });
+        }
     }
 
     setPositionAfter(sequence: Buffer): boolean {

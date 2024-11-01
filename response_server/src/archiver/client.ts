@@ -88,13 +88,9 @@ export async function captureClientData(inp: { version: Version }) {
                     reader.readSignedVarInt(); // Enchantment Seed
 
                     const blockPropertieslLength = reader.readVarInt(); // Block Properties Length
-                    if (blockPropertieslLength > 0) {
-                        const blockPropertyData = await nbt.read(buffer.subarray(reader.getOffset()), { endian: 'little', strict: false });
-                        if (blockPropertyData.byteOffset) {
-                            reader.shiftOffset(blockPropertyData.byteOffset);
-                        } else {
-                            throw new Error('Error reading block properties');
-                        }
+                    for (let i = 0; i < blockPropertieslLength; i++) {
+                        const blockName = reader.readString();
+                        const blockDefinition = (await reader.readNbt());
                     }
 
                     const itemsListLength = reader.readVarInt(); // Items List Length
@@ -124,16 +120,33 @@ export async function captureClientData(inp: { version: Version }) {
 
                     const stackSize = reader.readUnsignedShort();
                     const auxValue = reader.readVarInt();
-                    const blockHash = reader.readVarInt();
+                    const blockHash = reader.readSignedVarInt();
 
                     const creativeContent: CreativeContentData = { id, stackSize, auxValue, blockHash };
 
                     const userDataBuffer = reader.readByteArray();
                     if (userDataBuffer.length > 0) {
-                        const userReader = new BufferReader(userDataBuffer);
+                        try {
+                            const userReader = new BufferReader(userDataBuffer);
                         
-                        const serializationMarker = userReader.readShort();
-                        const serializationVersion = userReader.readByte();
+                            const serializationMarker = userReader.readShort();
+                            const serializationVersion = userReader.readByte();
+                            const tags = await userReader.readNbt();
+                            
+                            const canPlaceOnBlocksLength = userReader.readUnsignedInt();
+                            const canPlaceOnBlocks: string[] = [];
+                            for (let i = 0; i < canPlaceOnBlocksLength; i++) {
+                                canPlaceOnBlocks.push(userReader.readString());
+                            }
+    
+                            const canDestroyBlocksLength = userReader.readUnsignedInt();
+                            const canDestroyBlocks: string[] = [];
+                            for (let i = 0; i < canDestroyBlocksLength; i++) {
+                                canDestroyBlocks.push(userReader.readString());
+                            }
+                        } catch (_error) {
+                            // The bedrock client simply stops reading when this happens...
+                        }
                     }
                 }
                 
@@ -141,6 +154,14 @@ export async function captureClientData(inp: { version: Version }) {
             case 0x7A:
                 fs.writeFileSync(DirectoryManager.export('biome_list.hex'), buffer)
                 statusMessage(MessageType.Info, 'Logged BiomeDefinitionListPacket');
+                // await reader.readNbt();
+                // const biomeNbt = await reader.readNbt();
+                // console.log(biomeNbt);
+                // if (biomeNbt) {
+                //     const result = await nbt.write(biomeNbt);
+                //     await fs.promises.writeFile(DirectoryManager.export('biome_list.nbt'), result);
+                // }
+
                 break;
         }
     })
