@@ -2,9 +2,9 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import child from 'child_process';
-import { util } from '../util/util';
-import DirectoryManager from '../util/directory';
-import { MessageType, statusMessage } from '../util/console';
+import { util } from '../util/util.js';
+import DirectoryManager from '../util/directory.js';
+import { MessageType, statusMessage } from '../util/console.js';
 
 export interface Version {
     server: string;
@@ -146,7 +146,7 @@ function initialRunServer(): Promise<void> {
                 server.stderr.removeAllListeners('data');
                 server.stdout.pause();
                 server.stderr.pause();
-                server.kill();
+                server.kill('SIGINT');
             }
         };
 

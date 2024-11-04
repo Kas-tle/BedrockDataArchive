@@ -1,11 +1,11 @@
 import { ResponseData } from 'behavior_pack';
 import http from 'http';
-import fs, { stat } from 'fs';
+import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import child from 'child_process';
-import DirectoryManager from '../util/directory';
-import { MessageType, statusMessage } from '../util/console';
+import DirectoryManager from '../util/directory.js';
+import { MessageType, statusMessage } from '../util/console.js';
 
 export async function recieveData(): Promise<ResponseData> {
     try {
@@ -121,6 +121,6 @@ export function cleanServer(process: BedrockServerProcess) {
         server.stderr.removeAllListeners('data');
         server.stdout.pause();
         server.stderr.pause();
-        server.kill();
+        server.kill('SIGINT');
     }
 }

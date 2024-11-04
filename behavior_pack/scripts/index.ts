@@ -185,53 +185,66 @@ for (const block of BlockTypes.getAll()) {
         delete blockData.palleteStates['facing_direction'];
     }
 
+    if (blockData.palleteStates['age']) {
+        const ageStates = Array.from(blockData.palleteStates['age']) as number[];
+        const realAgeStates: number[] = [];
+        for (const age of ageStates) {
+            const testPerm = BlockPermutation.resolve(block.id, {
+                'age': age
+            })
+            if (testPerm.getState('age') === age) {
+                realAgeStates.push(age);
+            }
+        }
+        blockData.palleteStates['age'] = realAgeStates;
+    }
+
+    if (blockData.palleteStates['rail_direction']) {
+        const railStates = Array.from(blockData.palleteStates['rail_direction']) as number[];
+        const realRailStates: number[] = [];
+        for (const rail of railStates) {
+            const testPerm = BlockPermutation.resolve(block.id, {
+                'rail_direction': rail
+            })
+            if (testPerm.getState('rail_direction') === rail) {
+                realRailStates.push(rail);
+            }
+        }
+        blockData.palleteStates['rail_direction'] = realRailStates;
+    }
+    
     switch (block.id) {
-        case 'minecraft:cobblestone_wall':
-            delete blockData.palleteStates['wall_block_type'];
-            break;
-        case 'minecraft:nether_wart':
-        case 'minecraft:frosted_ice':
-            blockData.palleteStates['age'] = [0, 1, 2, 3];
-            break;
-        case 'minecraft:sandstone':
-        case 'minecraft:red_sandstone':
-            delete blockData.palleteStates['sand_stone_type'];
-            break;
-        case 'minecraft:cocoa':
-            blockData.palleteStates['age'] = [0, 1, 2];
-            break;
-        case 'minecraft:prismarine':
-            delete blockData.palleteStates['prismarine_block_type'];
-            break;
+        // case 'minecraft:cobblestone_wall':
+        //     delete blockData.palleteStates['wall_block_type'];
+        //     break;
+        // case 'minecraft:sandstone':
+        // case 'minecraft:red_sandstone':
+        //     delete blockData.palleteStates['sand_stone_type'];
+        //     break;
+        // case 'minecraft:prismarine':
+        //     delete blockData.palleteStates['prismarine_block_type'];
+        //     break;
         case 'minecraft:sculk_sensor':
             delete blockData.palleteStates['powered_bit'];
             break;
         case 'minecraft:structure_void':
             delete blockData.palleteStates['structure_void_type'];
             break;
-        case 'minecraft:chorus_flower':
-            blockData.palleteStates['age'] = [0, 1, 2, 3, 4, 5];
-            break;
-        case 'minecraft:quartz_block':
-        case 'minecraft:purpur_block':
-            delete blockData.palleteStates['chisel_type'];
-            break;
+        // case 'minecraft:quartz_block':
+        // case 'minecraft:purpur_block':
+        //     delete blockData.palleteStates['chisel_type'];
+        //     break;
         case 'minecraft:dirt':
         case 'minecraft:coarse_dirt':
             delete blockData.palleteStates['dirt_type'];
             break;
-        case 'minecraft:anvil':
-            delete blockData.palleteStates['damage'];
-            break;
-        case 'minecraft:golden_rail':
-        case 'minecraft:detector_rail':
-        case 'minecraft:activator_rail':
-            blockData.palleteStates['rail_direction'] = [ 0, 1, 2, 3, 4, 5 ];
-            break;
-        case 'minecraft:dead_horn_coral_wall_fan':
-        case 'minecraft:horn_coral_wall_fan':
-            delete blockData.palleteStates['coral_hang_type_bit'];
-            break;
+        // case 'minecraft:anvil':
+        //     delete blockData.palleteStates['damage'];
+        //     break;
+        // case 'minecraft:dead_horn_coral_wall_fan':
+        // case 'minecraft:horn_coral_wall_fan':
+        //     delete blockData.palleteStates['coral_hang_type_bit'];
+        //     break;
         case 'minecraft:sponge':
         case 'minecraft:wet_sponge':
             delete blockData.palleteStates['sponge_type'];
@@ -244,23 +257,33 @@ for (const block of BlockTypes.getAll()) {
         case 'minecraft:underwater_tnt':
             delete blockData.palleteStates['allow_underwater_bit'];
             break;
-        case 'minecraft:stone':
-            delete blockData.palleteStates['stone_type'];
-            break;
+        // case 'minecraft:stone':
+        //     delete blockData.palleteStates['stone_type'];
+        //     break;
     };
 
     data.blocks.data[blockData.blockId] = blockData;
 }
 
+const deprecatedStates: Set<string> = new Set();
 for (const blockId in possibleCrossDeprecations) {
     for (const stateName of possibleCrossDeprecations[blockId]) {
         for (const otherBlockId in possibleCrossDeprecations) {
             if (otherBlockId === blockId) continue;
 
             if (possibleCrossDeprecations[otherBlockId].includes(stateName)) {
+                deprecatedStates.add(stateName);
                 delete data.blocks.data[blockId].palleteStates[stateName];
             }
         }
+    }
+}
+
+deprecatedStates.delete('dead_bit'); // still used by sea pickles
+for (const stateName of deprecatedStates) {
+    for (const blockId in data.blocks.data) {
+        if (!data.blocks.data[blockId].palleteStates[stateName]) continue;
+        delete data.blocks.data[blockId].palleteStates[stateName];
     }
 }
 

@@ -1,7 +1,7 @@
 import nbt, { List, Tags, TagType } from 'prismarine-nbt';
 import fs from 'fs';
 import path from 'path';
-import DirectoryManager from '../util/directory';
+import DirectoryManager from '../util/directory.js';
 
 interface BlockEntry {
     name: { type: TagType.String, value: string };

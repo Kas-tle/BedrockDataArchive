@@ -57,13 +57,26 @@ async function downloadFile(inp: { url: string, location: string, overwriteCache
         'User-Agent': userAgent.toString()
     };
 
-    const { body } = await fetch(inp.url, { headers });
+    const { body, status } = await fetch(inp.url, { headers });
+
+    if (status !== 200) {
+        throw new Error(`Failed to download ${inp.url} to ${inp.location}`);
+    }
 
     if (!body) {
         throw new Error(`Failed to download ${inp.url} to ${inp.location}`);
     }
 
     await finished(Readable.fromWeb(body as ReadableStream<any>).pipe(stream));
+}
+
+async function fetchJson<T>(url: string): Promise<T> {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch ${url}`);
+    }
+
+    return await response.json();
 }
 
 function zipRoots(zip: AdmZip): Set<string> {
@@ -147,6 +160,7 @@ export const util = {
     fnv1_64,
     fnv1a_32,
     downloadFile,
+    fetchJson,
     zipRoots,
     longToInts,
     intsToLong,

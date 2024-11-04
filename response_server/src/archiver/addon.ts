@@ -1,10 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import { compareVersions } from 'compare-versions';
-import { util } from '../util/util';
+import { util } from '../util/util.js';
 import nbt, { TagType } from 'prismarine-nbt';
-import DirectoryManager from '../util/directory';
-import { Version } from './bedrock';
+import DirectoryManager from '../util/directory.js';
+import { Version } from './bedrock.js';
+import url from 'url';
+import { MessageType, statusMessage } from '../util/console.js';
 
 export async function deployAddon(inp: { version: Version }) {
     const versions = await getScriptVersions(inp);
@@ -20,8 +22,8 @@ export function disableAddon() {
 async function createAddon(inp: { versions: Awaited<ReturnType<typeof getScriptVersions>>}) {
     const { versions } = inp;
 
-    const scriptPath = require.resolve('behavior_pack/lib/scripts/index.js');
-    const manifestPath = require.resolve('behavior_pack/manifest.json');
+    const scriptPath = url.fileURLToPath(import.meta.resolve('behavior_pack/lib/scripts/index.js'));
+    const manifestPath = url.fileURLToPath(import.meta.resolve('behavior_pack/manifest.json'));
 
     const bpDir = DirectoryManager.workingSub('behavior_packs/archive_behavior_pack');
     const scriptsDir = DirectoryManager.workingSub('behavior_packs/archive_behavior_pack/scripts');
@@ -98,12 +100,18 @@ async function createAddon(inp: { versions: Awaited<ReturnType<typeof getScriptV
 async function getScriptVersions(inp: { version: Version }): Promise<{ server: string; serverNet: string; serverAdmin: string; }> {
     const { version } = inp;
 
-    await util.downloadFile({ 
-        url: `https://github.com/Mojang/bedrock-samples/archive/refs/tags/v${version.client}${version.type === 'preview' ? '-preview' : ''}.zip`,
-        location: DirectoryManager.cacheSamples(version.client)
-    });
+    const foundVersion = await closestVersionBase({ version });
+    statusMessage(MessageType.Info, `Using closest found version ${foundVersion} for the Mojang/bedrock-samples repository`);
+    try {
+        await util.downloadFile({ 
+            url: `https://github.com/Mojang/bedrock-samples/archive/refs/tags/v${foundVersion}${version.type === 'preview' ? '-preview' : ''}.zip`,
+            location: DirectoryManager.cacheSamples(foundVersion)
+        });
+    } catch (error) {
+        throw new Error('Failed to download bedrock-samples');
+    }
 
-    const zip = DirectoryManager.cacheSampleZip(version.client);
+    const zip = DirectoryManager.cacheSampleZip(foundVersion);
     const roots = util.zipRoots(zip);
 
     if (roots.size !== 1) {
@@ -113,7 +121,7 @@ async function getScriptVersions(inp: { version: Version }): Promise<{ server: s
 
     const modulesDir = `${root}/metadata/script_modules/@minecraft/`;
     if (!zip.getEntry(modulesDir)) {
-        throw new Error('No script modules found for version ' + version.client);
+        throw new Error('No script modules found for version ' + foundVersion);
     }
 
     const moduleEntries = zip.getEntries()
@@ -146,4 +154,50 @@ function getLatestModuleVersion(inp: { moduleEntries: string[], module: string }
     });
 
     return candidates[0];
+}
+
+async function closestVersionBase(inp: { version: Version }): Promise<string> {
+    const { version } = inp;
+
+    const response = await util.fetchJson<{
+        ref: string;
+    }[]>('https://api.github.com/repos/Mojang/bedrock-samples/git/refs/tags');
+
+    const tags = response.filter(tag => tag.ref.startsWith('refs/tags/v')).map(tag => tag.ref.slice('refs/tags/v'.length));
+
+    let possibleTags;
+    if (version.type === 'preview') {
+        possibleTags = tags.filter(tag => tag.endsWith('-preview'));
+    } else {
+        possibleTags = tags.filter(tag => !tag.endsWith('-preview'));
+    }
+
+    possibleTags = possibleTags.map(tag => tag.slice(0, tag.length - (tag.endsWith('-preview') ? '-preview'.length : 0)));
+
+    if (possibleTags.length === 0) {
+        throw new Error('No tags found');
+    }
+
+    const exactMatch = possibleTags.find(tag => tag === version.client);
+    if (exactMatch) {
+        return exactMatch;
+    }
+    const clientVersionSplit = version.client.split('.');
+
+    const closestPatches = possibleTags.filter(tag => tag.startsWith(`${clientVersionSplit[0]}.${clientVersionSplit[1]}.${clientVersionSplit[2]}`));
+    if (closestPatches.length > 0) {
+        return closestPatches.sort((a, b) => compareVersions(b, a))[0];
+    }
+
+    const closestMinors = possibleTags.filter(tag => tag.startsWith(`${clientVersionSplit[0]}.${clientVersionSplit[1]}`));
+    if (closestMinors.length > 0) {
+        return closestMinors.sort((a, b) => compareVersions(b, a))[0];
+    }
+
+    const closestMajors = possibleTags.filter(tag => tag.startsWith(`${clientVersionSplit[0]}`));
+    if (closestMajors.length > 0) {
+        return closestMajors.sort((a, b) => compareVersions(b, a))[0];
+    }
+
+    throw new Error('No closest version found');
 }

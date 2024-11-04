@@ -8,24 +8,26 @@
         "email": "kastle@kastle.dev"
     },
     "scripts": {
-        "dev": "tsnd --transpile-only --exit-child index.ts"
+        "dev": "tsx index.ts"
     },
     "devDependencies": {
         "@types/adm-zip": "^0.5.5",
         "@types/node": "^22.7.7",
         "@types/user-agents": "^1.0.4",
-        "ts-node-dev": "^2.0.0",
+        "ts-node": "^10.9.2",
+        "tsx": "^4.19.2",
         "typescript": "^5.6.3"
     },
     "dependencies": {
         "adm-zip": "^0.5.16",
         "bedrock-protocol": "^3.41.0",
         "behavior_pack": "workspace:^",
-        "chalk": "^4.1.2",
+        "chalk": "5.3.0",
         "compare-versions": "^6.1.1",
         "isomorphic-git": "^1.27.1",
         "nbtify": "^2.2.0",
         "prismarine-nbt": "^2.5.0",
         "user-agents": "^1.1.332"
-    }
+    },
+    "type": "module"
 }

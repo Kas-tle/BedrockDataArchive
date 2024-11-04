@@ -1,9 +1,8 @@
 import { BlockData, ResponseData } from "behavior_pack";
 import fs from "fs";
-import path from "path";
 import nbt, { List, Tags, TagType } from "prismarine-nbt";
-import DirectoryManager from "../util/directory";
-import { util } from "../util/util";
+import DirectoryManager from "../util/directory.js";
+import { util } from "../util/util.js";
 
 interface BlockEntry {
     name: { type: TagType.String, value: string };

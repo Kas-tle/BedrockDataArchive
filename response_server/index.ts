@@ -1,9 +1,9 @@
-import { setupBedrockServer } from './src/archiver/bedrock';
-import { deployAddon, disableAddon } from './src/archiver/addon';
-import { recieveData } from './src/archiver/data';
-import { processData } from './src/archiver/process';
-import { captureClientData } from './src/archiver/client';
-import { MessageType, statusMessage } from './src/util/console';
+import { setupBedrockServer } from './src/archiver/bedrock.js';
+import { deployAddon, disableAddon } from './src/archiver/addon.js';
+import { recieveData } from './src/archiver/data.js';
+import { processData } from './src/archiver/process.js';
+import { captureClientData } from './src/archiver/client.js';
+import { MessageType, statusMessage } from './src/util/console.js';
 
 async function main() {
     statusMessage(MessageType.Process, 'Setting up bedrock server');
