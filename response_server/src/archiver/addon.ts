@@ -6,7 +6,7 @@ import nbt, { TagType } from 'prismarine-nbt';
 import DirectoryManager from '../util/directory.js';
 import { Version } from './bedrock.js';
 import url from 'url';
-import { MessageType, statusMessage } from '../util/console.js';
+import { logger } from '../util/console.js';
 
 export async function deployAddon(inp: { version: Version }) {
     const versions = await getScriptVersions(inp);
@@ -101,7 +101,7 @@ async function getScriptVersions(inp: { version: Version }): Promise<{ server: s
     const { version } = inp;
 
     const foundVersion = await closestVersionBase({ version });
-    statusMessage(MessageType.Info, `Using closest found version ${foundVersion} for the Mojang/bedrock-samples repository`);
+
     try {
         await util.downloadFile({ 
             url: `https://github.com/Mojang/bedrock-samples/archive/refs/tags/v${foundVersion}${version.type === 'preview' ? '-preview' : ''}.zip`,
@@ -180,6 +180,7 @@ async function closestVersionBase(inp: { version: Version }): Promise<string> {
 
     const exactMatch = possibleTags.find(tag => tag === version.client);
     if (exactMatch) {
+        logger.info(`Exact version match ${exactMatch} for the Mojang/bedrock-samples repository`);
         return exactMatch;
     }
     const clientVersionSplit = version.client.split('.');

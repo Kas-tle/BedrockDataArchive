@@ -2,7 +2,7 @@ import { cleanServer, runServer } from './data.js';
 import fs from 'fs';
 import DirectoryManager from '../util/directory.js';
 import { Version } from './bedrock.js';
-import { MessageType, statusMessage } from '../util/console.js';
+import { logger } from '../util/console.js';
 import * as nbt from 'nbtify';
 import { BufferReader } from '../util/buffer.js';
 import { bedrock } from '../util/protocol.cjs';
@@ -152,7 +152,7 @@ export async function captureClientData(inp: { version: Version }) {
                 break;
 
             case 0x0B: // Start Game
-                statusMessage(MessageType.Info, 'Logged StartGamePacket');
+                logger.info('Logged StartGamePacket');
 
                 // If possible, skip to after level name (Bedrock level)
                 const hasBerockLevelString = reader.setPositionAfter(Buffer.from([

@@ -4,7 +4,7 @@ import fs from 'fs';
 import child from 'child_process';
 import { util } from '../util/util.js';
 import DirectoryManager from '../util/directory.js';
-import { MessageType, statusMessage } from '../util/console.js';
+import { logger } from '../util/console.js';
 
 export interface Version {
     server: string;
@@ -164,19 +164,20 @@ function initialRunServer(): Promise<void> {
 
         server.stdout.setEncoding('utf-8');
         server.stdout.on('data', chunk => {
-            statusMessage(MessageType.Plain, '[BDS] ' + chunk);
+            logger.bedrockServer(...chunk.split('\n').slice(0, -1));
+
             chunk = chunk.toString();
 
             if (chunk.includes('Server started')) {
                 cleanup();
-                statusMessage(MessageType.Completion, 'Server setup complete');
+                logger.completion('Server setup complete');
                 resolve();
             }
         });
 
         server.stderr.setEncoding('utf-8');
         server.stderr.on('data', chunk => {
-            statusMessage(MessageType.Error, '[BDS] ' + chunk);
+            logger.bedrockServerError(...chunk.split('\n').slice(0, -1));
             cleanup();
             reject(new Error('Failed to start BDS'));
         });

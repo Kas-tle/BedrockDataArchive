@@ -5,7 +5,7 @@ import os from 'os';
 import path from 'path';
 import child from 'child_process';
 import DirectoryManager from '../util/directory.js';
-import { MessageType, statusMessage } from '../util/console.js';
+import { logger } from '../util/console.js';
 
 export async function recieveData(): Promise<ResponseData> {
     try {
@@ -17,7 +17,7 @@ export async function recieveData(): Promise<ResponseData> {
         fs.writeFileSync(DirectoryManager.export('data.json'), JSON.stringify(data, null, 4));
         return data;
     } catch (error) {
-        statusMessage(MessageType.Error, 'Failed to recieve data from bedrock server: ' + error);
+        logger.error('Failed to recieve data from bedrock server: ' + error);
     }
 
     throw new Error('Failed to recieve data');
@@ -39,7 +39,7 @@ async function getResponseData(): Promise<ResponseData> {
                 const response = JSON.parse(data) as ResponseData;
 
                 server.close(() => {
-                    statusMessage(MessageType.Process, 'HTTP server closed after handling request from bedrock server');
+                    logger.process('HTTP server closed after handling request from bedrock server');
                     resolve(response);
                 });
             });
@@ -52,7 +52,7 @@ async function getResponseData(): Promise<ResponseData> {
         server.once('request', requestHandler);
 
         server.listen(2001, () => {
-            statusMessage(MessageType.Process, 'HTTP server listening for data from bedrock server on port 2001');
+            logger.process('HTTP server listening for data from bedrock server on port 2001');
         });
 
         server.on('error', (err) => {
@@ -89,13 +89,12 @@ export function runServer(): Promise<BedrockServerProcess> {
 
         server.stdout.setEncoding('utf-8');
         server.stdout.on('data', chunk => {
-            statusMessage(MessageType.Plain, '[BDS] ' + chunk);
-            chunk = chunk.toString();
+            logger.bedrockServer(...chunk.split('\n').slice(0, -1));
         });
 
         server.stderr.setEncoding('utf-8');
         server.stderr.on('data', chunk => {
-            statusMessage(MessageType.Error, '[BDS] ' + chunk);
+            logger.bedrockServerError(...chunk.split('\n').slice(0, -1));
             cleanup();
             reject(new Error('Failed to start BDS'));
         });

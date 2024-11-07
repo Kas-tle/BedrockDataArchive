@@ -1,5 +1,5 @@
 import * as nbt from 'nbtify';
-import { MessageType, statusMessage } from './console.js';
+import { logger } from './console.js';
 import PacketParserError from './error.js';
 
 export class BufferReader {
@@ -942,7 +942,7 @@ export class BufferReader {
             case 3:
                 return { unlockingContext };
             default:
-                statusMessage(MessageType.Critical, `Unrecognized unlocking context: ${unlockingContext}`);
+                logger.critical(`Unrecognized unlocking context: ${unlockingContext}`);
         }
     }
 

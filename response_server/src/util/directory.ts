@@ -7,8 +7,12 @@ class DirectoryManager {
 
     private static workingDir = path.join(DirectoryManager.rootDir, 'working');
     private static exportDir = path.join(DirectoryManager.rootDir, 'export');
-    private static cacheDir = path.join(DirectoryManager.rootDir, 'cache');
 
+    private static logsDir = path.join(DirectoryManager.rootDir, 'logs');
+    private static logFilePath = path.join(DirectoryManager.logsDir, `log-${new Date().toISOString().replace(/:/g, '-')}.log`);
+    private static logFile: fs.WriteStream;
+
+    private static cacheDir = path.join(DirectoryManager.rootDir, 'cache');
     private static cacheSamplesDir = path.join(DirectoryManager.cacheDir, 'samples');
     private static cacheBdsDir = path.join(DirectoryManager.cacheDir, 'bds');
     private static cacheVersionsFile = path.join(DirectoryManager.cacheDir, 'versions/bds-versions.zip');
@@ -24,6 +28,10 @@ class DirectoryManager {
 
         fs.mkdirSync(this.workingDir, { recursive: true });
         fs.mkdirSync(this.exportDir, { recursive: true });
+
+        fs.mkdirSync(this.logsDir, { recursive: true });
+        this.logFile = fs.createWriteStream(this.logFilePath, { flags: 'a' });
+
         fs.mkdirSync(this.cacheSamplesDir, { recursive: true });
         fs.mkdirSync(this.cacheBdsDir, { recursive: true });
         fs.mkdirSync(path.dirname(this.cacheVersionsFile), { recursive: true });
@@ -52,6 +60,11 @@ class DirectoryManager {
 
     static workingFile(sub: string): string {
         return path.join(this.working, sub);
+    }
+
+    static get log(): fs.WriteStream {
+        this.init();
+        return this.logFile;
     }
 
     static export(file?: string): string {
